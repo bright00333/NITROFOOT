@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NITROFOOT.br | IA Predictive Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-green: #39FF14;
+            --dark-bg: #050505;
+            --card-bg: #0f0f0f;
+        }
+        body {
+            background-color: var(--dark-bg);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .font-nitro { font-family: 'Orbitron', sans-serif; }
+        .neon-border { border: 1px solid rgba(57, 255, 20, 0.3); }
+        .neon-glow { box-shadow: 0 0 20px rgba(57, 255, 20, 0.1); }
+        .neon-text { color: var(--neon-green); text-shadow: 0 0 8px rgba(57, 255, 20, 0.5); }
+        .neon-bg { background-color: var(--neon-green); }
+        .glass { background: rgba(15, 15, 15, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        .loader {
+            width: 48px; height: 48px;
+            border: 3px solid #FFF; border-bottom-color: var(--neon-green);
+            border-radius: 50%; display: inline-block;
+            box-sizing: border-box; animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .progress-bar-fill { transition: width 1.5s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
+        
+        input:focus { border-color: var(--neon-green) !important; outline: none; box-shadow: 0 0 10px rgba(57, 255, 20, 0.2); }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- CONFIGURATION -->
+    <script>
+        const CONFIG = {
+            API_FOOTBALL_KEY: "1403767bd9d831596d11338ff35b888a",
+            RAPIDAPI_HOST: "v3.football.api-sports.io",
+            BASE_URL: "https://v3.football.api-sports.io"
+        };
+    </script>
+
+    <!-- HEADER -->
+    <header class="border-b border-white/5 py-6 px-6 glass sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 neon-bg rounded-lg flex items-center justify-center shadow-[0_0_15px_#39FF14]">
+                    <svg class="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-nitro font-bold tracking-tighter italic">NITROFOOT<span class="neon-text">.br</span></h1>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold">Advanced AI Sports Intelligence</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="hidden md:block text-right">
+                    <p class="text-[10px] text-gray-500 uppercase">Engine Status</p>
+                    <p class="text-xs font-bold neon-text">LIVE DATA CONNECTED</p>
+                </div>
+                <div class="h-10 w-[1px] bg-white/10 hidden md:block"></div>
+                <div id="timestamp" class="text-xs font-mono text-gray-400 bg-white/5 px-3 py-1 rounded">--:--:--</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-10">
+        <!-- INPUT ZONE -->
+        <section class="glass p-8 rounded-3xl neon-border neon-glow mb-12">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+                <div class="lg:col-span-9">
+                    <label class="block text-[11px] font-bold text-gray-400 mb-4 uppercase tracking-widest">Analyse de Match en Temps Réel</label>
+                    <div class="relative group">
+                        <input type="text" id="matchInput" placeholder="Ex: Real Madrid vs Barcelona" 
+                               class="w-full bg-black/60 border border-white/10 rounded-2xl px-8 py-5 text-xl focus:outline-none transition-all font-medium placeholder:text-gray-700">
+                        <div class="absolute right-6 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-[#39FF14] transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-3">
+                    <button onclick="runNitroAnalysis()" id="analyzeBtn" 
+                            class="w-full neon-bg text-black font-black py-5 rounded-2xl hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3 text-sm tracking-widest">
+                        LANCER L'ANALYSE
+                    </button>
+                </div>
+            </div>
+            <p class="mt-4 text-[10px] text-gray-500 italic">Note: Utilisez les noms officiels des clubs pour une précision maximale.</p>
+        </section>
+
+        <!-- ERROR BOX -->
+        <div id="errorDisplay" class="hidden mb-10 p-6 bg-red-500/10 border border-red-500/30 text-red-400 rounded-2xl flex items-center gap-4 animate-bounce">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span id="errorMsg" class="font-bold text-sm uppercase tracking-tight">Données indisponibles, réessayez.</span>
+        </div>
+
+        <!-- LOADING -->
+        <div id="loadingUI" class="hidden flex flex-col items-center justify-center py-20">
+            <span class="loader mb-8"></span>
+            <h3 class="text-2xl font-nitro neon-text animate-pulse tracking-widest">NITRO ENGINE PROCESSING...</h3>
+            <div class="mt-4 flex gap-2">
+                <span class="w-2 h-2 bg-[#39FF14] rounded-full animate-ping"></span>
+                <span class="text-[10px] text-gray-500 uppercase font-bold">Extraction des métriques API-Sports</span>
+            </div>
+        </div>
+
+        <!-- RESULTS AREA -->
+        <div id="resultsUI" class="hidden space-y-10">
+            
+            <!-- AI SCORES COMPARISON -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- TEAM A -->
+                <div class="glass p-8 rounded-[2rem] relative overflow-hidden border-l-4 border-[#39FF14]">
+                    <div class="flex justify-between items-start mb-8">
+                        <div>
+                            <h2 id="teamAName" class="text-4xl font-nitro font-bold truncate max-w-[250px]">---</h2>
+                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Domicile / Home</span>
+                        </div>
+                        <div class="text-right">
+                            <div id="teamAScore" class="text-5xl font-nitro neon-text">0%</div>
+                            <p class="text-[10px] text-gray-500 font-black mt-1">AI POWER INDEX</p>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="stat-group">
+                            <div class="flex justify-between text-[10px] font-bold mb-2 uppercase tracking-tighter"><span>Attack Index</span><span id="atkAVal">0%</span></div>
+                            <div class="h-2 bg-white/5 rounded-full overflow-hidden"><div id="atkBarA" class="h-full neon-bg progress-bar-fill" style="width: 0%"></div></div>
+                        </div>
+                        <div class="stat-group">
+                            <div class="flex justify-between text-[10px] font-bold mb-2 uppercase tracking-tighter"><span>Defense Index</span><span id="defAVal">0%</span></div>
+                            <div class="h-2 bg-white/5 rounded-full overflow-hidden"><div id="defBarA" class="h-full bg-blue-500 progress-bar-fill" style="width: 0%"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TEAM B -->
+                <div class="glass p-8 rounded-[2rem] relative overflow-hidden border-r-4 border-blue-500">
+                    <div class="flex justify-between items-start mb-8">
+                        <div class="text-left">
+                            <div id="teamBScore" class="text-5xl font-nitro text-blue-500">0%</div>
+                            <p class="text-[10px] text-gray-500 font-black mt-1">AI POWER INDEX</p>
+                        </div>
+                        <div class="text-right">
+                            <h2 id="teamBName" class="text-4xl font-nitro font-bold truncate max-w-[250px]">---</h2>
+                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Extérieur / Away</span>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="stat-group">
+                            <div class="flex justify-between text-[10px] font-bold mb-2 uppercase tracking-tighter"><span>Attack Index</span><span id="atkBVal">0%</span></div>
+                            <div class="h-2 bg-white/5 rounded-full overflow-hidden"><div id="atkBarB" class="h-full neon-bg progress-bar-fill" style="width: 0%"></div></div>
+                        </div>
+                        <div class="stat-group">
+                            <div class="flex justify-between text-[10px] font-bold mb-2 uppercase tracking-tighter"><span>Defense Index</span><span id="defBVal">0%</span></div>
+                            <div class="h-2 bg-white/5 rounded-full overflow-hidden"><div id="defBarB" class="h-full bg-blue-500 progress-bar-fill" style="width: 0%"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FINAL PREDICTIONS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- BET 1 -->
+                <div class="glass p-10 rounded-[2.5rem] border border-white/5 relative group hover:border-[#39FF14]/40 transition-all">
+                    <div class="flex justify-between items-center mb-8">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 neon-bg rounded-full"></div>
+                            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Pari 1 : Marché Buts</span>
+                        </div>
+                        <div id="conf1" class="px-4 py-1.5 neon-bg text-black text-[11px] font-black rounded-full shadow-[0_0_10px_rgba(57,255,20,0.3)]">CONF: --%</div>
+                    </div>
+                    <h4 id="bet1Title" class="text-3xl font-nitro mb-4 text-white">---</h4>
+                    <div class="p-4 bg-white/5 rounded-2xl">
+                        <p id="bet1Desc" class="text-sm text-gray-400 leading-relaxed italic">---</p>
+                    </div>
+                </div>
+
+                <!-- BET 2 -->
+                <div class="glass p-10 rounded-[2.5rem] border border-white/5 relative group hover:border-[#39FF14]/40 transition-all">
+                    <div class="flex justify-between items-center mb-8">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Pari 2 : Résultat Final</span>
+                        </div>
+                        <div id="conf2" class="px-4 py-1.5 neon-bg text-black text-[11px] font-black rounded-full shadow-[0_0_10px_rgba(57,255,20,0.3)]">CONF: --%</div>
+                    </div>
+                    <h4 id="bet2Title" class="text-3xl font-nitro mb-4 text-white">---</h4>
+                    <div class="p-4 bg-white/5 rounded-2xl">
+                        <p id="bet2Desc" class="text-sm text-gray-400 leading-relaxed italic">---</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RISK INDICATOR -->
+            <div class="flex flex-col md:flex-row justify-between items-center p-8 glass rounded-3xl gap-6">
+                <div class="flex items-center gap-4">
+                    <span class="text-xs font-black uppercase text-gray-500 tracking-widest">Indice de Risque Global :</span>
+                    <div id="riskLevel" class="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest border">---</div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                    <span id="updateTime" class="text-[10px] font-mono text-gray-500 uppercase">Analyse mise à jour : --:--</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- DATA FETCHING MODULE ---
+
+        async function fetchNitro(endpoint, params = {}) {
+            const url = new URL(`${CONFIG.BASE_URL}/${endpoint}`);
+            Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'x-apisports-key': CONFIG.API_FOOTBALL_KEY
+                }
+            });
+
+            if (!response.ok) throw new Error("Erreur de connexion API");
+            const data = await response.json();
+            if (data.errors && Object.keys(data.errors).length > 0) {
+                throw new Error("Limite API atteinte ou erreur serveur");
+            }
+            return data.response;
+        }
+
+        async function getTeamData(name) {
+            const res = await fetchNitro('teams', { search: name });
+            return res.length > 0 ? res[0].team : null;
+        }
+
+        async function getRecentMatches(teamId) {
+            return await fetchNitro('fixtures', { team: teamId, last: 8, status: 'FT' });
+        }
+
+        async function getHeadToHead(idA, idB) {
+            return await fetchNitro('fixtures/headtohead', { h2h: `${idA}-${idB}`, last: 5 });
+        }
+
+        async function getTeamStats(teamId, leagueId, season) {
+            return await fetchNitro('teams/statistics', { team: teamId, league: leagueId, season: season });
+        }
+
+        async function getLineups(teamId) {
+            const lastMatch = await fetchNitro('fixtures', { team: teamId, last: 1, status: 'FT' });
+            if (lastMatch.length > 0) {
+                return await fetchNitro('fixtures/lineups', { fixture: lastMatch[0].fixture.id, team: teamId });
+            }
+            return null;
+        }
+
+        // --- AI ANALYSIS ENGINE ---
+
+        function calculateFormScore(matches, teamId) {
+            if (!matches || matches.length === 0) return 50;
+            let points = 0;
+            matches.forEach(m => {
+                const isHome = m.teams.home.id === teamId;
+                const goalsFor = isHome ? m.goals.home : m.goals.away;
+                const goalsAgainst = isHome ? m.goals.away : m.goals.home;
+                if (goalsFor > goalsAgainst) points += 3;
+                else if (goalsFor === goalsAgainst) points += 1;
+            });
+            return (points / (matches.length * 3)) * 100;
+        }
+
+        function calculateAttackIndex(stats) {
+            if (!stats || !stats.goals) return 50;
+            const avg = parseFloat(stats.goals.for.average.total) || 0;
+            return Math.min((avg / 2.8) * 100, 100);
+        }
+
+        function calculateDefenseIndex(stats) {
+            if (!stats || !stats.goals) return 50;
+            const avg = parseFloat(stats.goals.against.average.total) || 0;
+            return Math.max(100 - (avg * 35), 0);
+        }
+
+        function calculateTacticalScore(lineups) {
+            if (!lineups || lineups.length === 0) return 75;
+            const formation = lineups[0].formation;
+            const metaFormations = ['4-3-3', '4-2-3-1', '4-4-2', '3-4-3'];
+            return metaFormations.includes(formation) ? 95 : 70;
+        }
+
+        // --- UI CONTROLLER ---
+
+        async function runNitroAnalysis() {
+            const input = document.getElementById('matchInput').value;
+            const btn = document.getElementById('analyzeBtn');
+            const loader = document.getElementById('loadingUI');
+            const results = document.getElementById('resultsUI');
+            const errorBox = document.getElementById('errorDisplay');
+            
+            if (!input.toLowerCase().includes('vs')) {
+                showError("Format invalide. Utilisez: Équipe A vs Équipe B");
+                return;
+            }
+
+            // UI Reset
+            results.classList.add('hidden');
+            errorBox.classList.add('hidden');
+            loader.classList.remove('hidden');
+            btn.disabled = true;
+
+            try {
+                const [nameA, nameB] = input.split(/vs/i).map(s => s.trim());
+                
+                // Step 1: Resolve IDs
+                const teamA = await getTeamData(nameA);
+                const teamB = await getTeamData(nameB);
+
+                if (!teamA || !teamB) throw new Error("Équipe(s) introuvable(s). Vérifiez l'orthographe.");
+
+                // Step 2: Parallel Data Collection
+                const [matchesA, matchesB, h2hData] = await Promise.all([
+                    getRecentMatches(teamA.id),
+                    getRecentMatches(teamB.id),
+                    getHeadToHead(teamA.id, teamB.id)
+                ]);
+
+                if (matchesA.length === 0) throw new Error("Données de saison insuffisantes pour l'analyse.");
+
+                const leagueId = matchesA[0].league.id;
+                const season = matchesA[0].league.season;
+
+                const [statsA, statsB, lineupA, lineupB] = await Promise.all([
+                    getTeamStats(teamA.id, leagueId, season),
+                    getTeamStats(teamB.id, leagueId, season),
+                    getLineups(teamA.id),
+                    getLineups(teamB.id)
+                ]);
+
+                // Step 3: Engine Calculation
+                const formA = calculateFormScore(matchesA, teamA.id);
+                const formB = calculateFormScore(matchesB, teamB.id);
+                const atkA = calculateAttackIndex(statsA);
+                const atkB = calculateAttackIndex(statsB);
+                const defA = calculateDefenseIndex(statsA);
+                const defB = calculateDefenseIndex(statsB);
+                const tactA = calculateTacticalScore(lineupA);
+                const tactB = calculateTacticalScore(lineupB);
+                
+                let h2hScoreA = 50;
+                if (h2hData.length > 0) {
+                    const winsA = h2hData.filter(m => (m.teams.home.id === teamA.id && m.goals.home > m.goals.away) || (m.teams.away.id === teamA.id && m.goals.away > m.goals.home)).length;
+                    h2hScoreA = (winsA / h2hData.length) * 100;
+                }
+
+                // Global AI Formula
+                const finalA = (formA * 0.25) + (atkA * 0.20) + (defA * 0.15) + (h2hScoreA * 0.15) + (tactA * 0.15) + (85 * 0.10);
+                const finalB = (formB * 0.25) + (atkB * 0.20) + (defB * 0.15) + ((100-h2hScoreA) * 0.15) + (tactB * 0.15) + (80 * 0.10);
+
+                displayResults({
+                    teamA: { name: teamA.name, score: finalA, atk: atkA, def: defA },
+                    teamB: { name: teamB.name, score: fina
